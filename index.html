@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Merge Numbers Mobile Ready</title>
+    <style>
+        :root {
+            --bg-color: #bbada0;
+            --cell-color: rgba(238, 228, 218, 0.35);
+            --text-color: #776e65;
+            /* 自适应尺寸：手机端取屏幕宽度的90%，最大400px */
+            --board-size: clamp(280px, 92vw, 400px);
+            --grid-gap: clamp(8px, 3vw, 15px);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none; /* 禁止长按弹出菜单 */
+            -webkit-user-select: none;   /* 禁止选择文本 */
+            user-select: none;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #faf8ef;
+            font-family: "Clear Sans", Arial, sans-serif;
+            /* 关键：防止移动端拖动页面 */
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        /* 顶部导航与控制 */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: var(--board-size);
+            margin-bottom: 10px;
+        }
+
+        .stats-group { display: flex; gap: 10px; }
+
+        .info-box {
+            background-color: var(--bg-color);
+            padding: 5px 12px;
+            border-radius: 6px;
+            color: white;
+            text-align: center;
+            min-width: 60px;
+        }
+        .info-title { font-size: 12px; display: block; opacity: 0.8; }
+        .info-value { font-size: 20px; font-weight: bold; }
+
+        .btn-new-game {
+            background-color: #8f7a66;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-new-game:active { transform: scale(0.95); }
+
+        /* 预览框微调 */
+        #preview-cell-container {
+            width: 36px; height: 36px;
+            background-color: var(--cell-color);
+            border-radius: 4px;
+            margin: 2px auto 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .preview-cell {
+            width: 30px; height: 30px; line-height: 30px;
+            font-size: 18px; text-align: center; border-radius: 3px; font-weight: bold;
+        }
+
+        /* 游戏棋盘响应式高度 */
+        #game-board {
+            position: relative;
+            width: var(--board-size);
+            height: var(--board-size);
+            background-color: var(--bg-color);
+            border-radius: 6px;
+            padding: var(--grid-gap);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            grid-gap: var(--grid-gap);
+        }
+
+        /* 方块样式升级 */
+        .cell-container {
+            width: 100%; height: 100%;
+            background-color: var(--cell-color);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .tile {
+            width: 100%; height: 100%;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 8vw, 35px); /* 文字大小随容器缩放 */
+            font-weight: bold;
+            color: var(--text-color);
+            position: absolute;
+            top: 0; left: 0;
+            transition: transform 0.1s ease-in-out;
+        }
+
+        /* 动画 */
+        @keyframes appear { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .tile-new { animation: appear 0.15s ease-out; }
+        .tile-merged { animation: pop 0.15s ease-out; z-index: 10; }
+
+        /* 颜色表 */
+        .n-1 { background-color: #64b5f6; color: white; }
+        .n-2 { background-color: #ef5350; color: white; }
+        .n-3 { background-color: #ffffff; }
+        .n-6 { background-color: #f2b179; color: white; }
+        .n-12 { background-color: #f59563; color: white; }
+        .n-24 { background-color: #f67c5f; color: white; }
+        .n-huge { background-color: #edcf72; color: white; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <button class="btn-new-game" onclick="initGame()">New Game</button>
+        <div class="stats-group">
+            <div class="info-box">
+                <span class="info-title">NEXT</span>
+                <div id="preview-cell-container"></div>
+            </div>
+            <div class="info-box">
+                <span class="info-title">SCORE</span>
+                <span class="info-value" id="score">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-board">
+        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
+        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
+        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
+        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
+    </div>
+
+    <script>
+        // 游戏核心逻辑 (继承上一版本并修复移动端兼容)
+        const boardElement = document.getElementById('game-board');
+        const scoreElement = document.getElementById('score');
+        const previewContainer = document.getElementById('preview-cell-container');
+        const bgCells = document.querySelectorAll('.cell-container');
+
+        let board = [];
+        let score = 0;
+        let tileStates = [];
+        let nextValue = null;
+
+        function initGame() {
+            board = Array(16).fill(0);
+            tileStates = Array(16).fill(null);
+            score = 0;
+            generateNextValue();
+            updateUI();
+            addTile();
+            addTile();
+            render();
+        }
+
+        function generateNextValue() {
+            nextValue = Math.random() > 0.5 ? 1 : 2;
+        }
+
+        function updateUI() {
+            scoreElement.innerText = score;
+            previewContainer.innerHTML = `<div class="preview-cell n-${nextValue}">${nextValue}</div>`;
+        }
+
+        function addTile() {
+            const emptyCells = board.map((v, i) => v === 0 ? i : null).filter(v => v !== null);
+            if (emptyCells.length > 0) {
+                const idx = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                board[idx] = nextValue;
+                tileStates[idx] = 'new';
+                generateNextValue();
+                updateUI();
+            }
+        }
+
+        function render() {
+            document.querySelectorAll('.tile').forEach(t => t.remove());
+            board.forEach((val, idx) => {
+                if (val > 0) {
+                    const t = document.createElement('div');
+                    t.className = `tile n-${val <= 24 ? val : 'huge'}`;
+                    if (tileStates[idx]) t.classList.add(`tile-${tileStates[idx]}`);
+                    t.innerText = val;
+                    bgCells[idx].appendChild(t);
+                }
+            });
+            tileStates.fill(null);
+        }
+
+        function canMerge(a, b) {
+            return (a !== 0 && b !== 0) && (((a === 1 && b === 2) || (a === 2 && b === 1)) || (a === b && a >= 3));
+        }
+
+        function move(dir) {
+            let moved = false;
+            tileStates.fill(null);
+            const isHoriz = dir === 'LEFT' || dir === 'RIGHT';
+            const isReverse = dir === 'RIGHT' || dir === 'DOWN';
+
+            for (let i = 0; i < 4; i++) {
+                let line = [];
+                for (let j = 0; j < 4; j++) {
+                    line.push(board[isHoriz ? (i * 4 + j) : (j * 4 + i)]);
+                }
+                if (isReverse) line.reverse();
+
+                let filtered = line.filter(v => v !== 0);
+                let res = [];
+                let lineMerged = Array(4).fill(false);
+
+                for (let j = 0; j < filtered.length; j++) {
+                    if (j < filtered.length - 1 && canMerge(filtered[j], filtered[j+1])) {
+                        const val = filtered[j] + filtered[j+1];
+                        res.push(val);
+                        score += val;
+                        lineMerged[res.length - 1] = true;
+                        j++;
+                        moved = true;
+                    } else {
+                        res.push(filtered[j]);
+                    }
+                }
+                while (res.length < 4) res.push(0);
+                if (isReverse) { res.reverse(); lineMerged.reverse(); }
+
+                for (let j = 0; j < 4; j++) {
+                    const idx = isHoriz ? (i * 4 + j) : (j * 4 + i);
+                    if (board[idx] !== res[j]) moved = true;
+                    board[idx] = res[j];
+                    if (lineMerged[j]) tileStates[idx] = 'merged';
+                }
+            }
+
+            if (moved) {
+                addTile();
+                render();
+                if (isGameOver()) setTimeout(() => alert('Game Over!'), 300);
+            }
+        }
+
+        function isGameOver() {
+            if (board.includes(0)) return false;
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const idx = i * 4 + j;
+                    if (j < 3 && canMerge(board[idx], board[idx+1])) return false;
+                    if (i < 3 && canMerge(board[idx], board[idx+4])) return false;
+                }
+            }
+            return true;
+        }
+
+        // --- 增强版触摸支持 ---
+        let startX, startY;
+        document.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, {passive: false});
+
+        document.addEventListener('touchmove', e => {
+            e.preventDefault(); // 彻底阻止手机端滚动
+        }, {passive: false});
+
+        document.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    move(dx > 0 ? 'RIGHT' : 'LEFT');
+                } else {
+                    move(dy > 0 ? 'DOWN' : 'UP');
+                }
+            }
+        }, {passive: false});
+
+        // 键盘支持
+        window.addEventListener('keydown', e => {
+            if (e.key.includes('Arrow')) {
+                e.preventDefault();
+                move(e.key.replace('Arrow', '').toUpperCase());
+            }
+        });
+
+        initGame();
+    </script>
+</body>
+</html>
