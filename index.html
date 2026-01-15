@@ -3,244 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Merge Numbers Mobile Ready</title>
+    <title>Merge Numbers - Fluid Motion</title>
     <style>
         :root {
             --bg-color: #bbada0;
             --cell-color: rgba(238, 228, 218, 0.35);
-            --text-color: #776e65;
-            /* 自适应尺寸：手机端取屏幕宽度的90%，最大400px */
             --board-size: clamp(280px, 92vw, 400px);
-            --grid-gap: clamp(8px, 3vw, 15px);
-        }
-
-        * {
-            box-sizing: border-box;
-            -webkit-touch-callout: none; /* 禁止长按弹出菜单 */
-            -webkit-user-select: none;   /* 禁止选择文本 */
-            user-select: none;
+            --grid-gap: 12px;
+            --cell-size: calc((var(--board-size) - (var(--grid-gap) * 5)) / 4);
         }
 
         body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #faf8ef;
-            font-family: "Clear Sans", Arial, sans-serif;
-            /* 关键：防止移动端拖动页面 */
-            touch-action: none;
-            overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; background-color: #faf8ef;
+            font-family: Arial, sans-serif; touch-action: none; overflow: hidden;
         }
 
-        /* 顶部导航与控制 */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: var(--board-size);
-            margin-bottom: 10px;
-        }
+        .header { width: var(--board-size); display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .score-box { background: var(--bg-color); color: white; padding: 10px; border-radius: 6px; text-align: center; min-width: 80px; }
 
-        .stats-group { display: flex; gap: 10px; }
-
-        .info-box {
-            background-color: var(--bg-color);
-            padding: 5px 12px;
-            border-radius: 6px;
-            color: white;
-            text-align: center;
-            min-width: 60px;
-        }
-        .info-title { font-size: 12px; display: block; opacity: 0.8; }
-        .info-value { font-size: 20px; font-weight: bold; }
-
-        .btn-new-game {
-            background-color: #8f7a66;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .btn-new-game:active { transform: scale(0.95); }
-
-        /* 预览框微调 */
-        #preview-cell-container {
-            width: 36px; height: 36px;
-            background-color: var(--cell-color);
-            border-radius: 4px;
-            margin: 2px auto 0;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .preview-cell {
-            width: 30px; height: 30px; line-height: 30px;
-            font-size: 18px; text-align: center; border-radius: 3px; font-weight: bold;
-        }
-
-        /* 游戏棋盘响应式高度 */
         #game-board {
-            position: relative;
-            width: var(--board-size);
-            height: var(--board-size);
-            background-color: var(--bg-color);
-            border-radius: 6px;
-            padding: var(--grid-gap);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(4, 1fr);
-            grid-gap: var(--grid-gap);
+            position: relative; width: var(--board-size); height: var(--board-size);
+            background-color: var(--bg-color); border-radius: 6px; padding: var(--grid-gap);
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); grid-gap: var(--grid-gap);
         }
 
-        /* 方块样式升级 */
-        .cell-container {
-            width: 100%; height: 100%;
-            background-color: var(--cell-color);
-            border-radius: 3px;
-            position: relative;
-        }
+        .grid-cell { width: 100%; height: 100%; background: var(--cell-color); border-radius: 4px; }
 
+        /* 动态生成的方块样式 */
         .tile {
-            width: 100%; height: 100%;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(20px, 8vw, 35px); /* 文字大小随容器缩放 */
-            font-weight: bold;
-            color: var(--text-color);
             position: absolute;
-            top: 0; left: 0;
-            transition: transform 0.1s ease-in-out;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: bold; color: #776e65;
+            z-index: 10;
+            transition: transform 0.1s ease-out; /* 用于松手后的回弹或到位 */
+            pointer-events: none; /* 防止干扰触摸事件 */
         }
 
-        /* 动画 */
-        @keyframes appear { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-        .tile-new { animation: appear 0.15s ease-out; }
-        .tile-merged { animation: pop 0.15s ease-out; z-index: 10; }
-
-        /* 颜色表 */
         .n-1 { background-color: #64b5f6; color: white; }
         .n-2 { background-color: #ef5350; color: white; }
         .n-3 { background-color: #ffffff; }
         .n-6 { background-color: #f2b179; color: white; }
-        .n-12 { background-color: #f59563; color: white; }
-        .n-24 { background-color: #f67c5f; color: white; }
-        .n-huge { background-color: #edcf72; color: white; font-size: 0.8em; }
+        .tile-new { animation: appear 0.2s ease-out; }
+
+        @keyframes appear { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <div class="header-container">
-        <button class="btn-new-game" onclick="initGame()">New Game</button>
-        <div class="stats-group">
-            <div class="info-box">
-                <span class="info-title">NEXT</span>
-                <div id="preview-cell-container"></div>
-            </div>
-            <div class="info-box">
-                <span class="info-title">SCORE</span>
-                <span class="info-value" id="score">0</span>
-            </div>
-        </div>
+    <div class="header">
+        <div class="score-box">Next: <span id="next-val">-</span></div>
+        <div class="score-box">Score: <span id="score">0</span></div>
     </div>
 
     <div id="game-board">
-        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
-        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
-        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
-        <div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div><div class="cell-container"></div>
+        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
     </div>
 
     <script>
-        // 游戏核心逻辑 (继承上一版本并修复移动端兼容)
-        const boardElement = document.getElementById('game-board');
+        const boardContainer = document.getElementById('game-board');
+        const nextElement = document.getElementById('next-val');
         const scoreElement = document.getElementById('score');
-        const previewContainer = document.getElementById('preview-cell-container');
-        const bgCells = document.querySelectorAll('.cell-container');
 
-        let board = [];
+        let board = Array(16).fill(0);
         let score = 0;
-        let tileStates = [];
-        let nextValue = null;
+        let nextValue = 1;
+        let startX, startY, currentDir = null;
+        let isMoving = false;
 
-        function initGame() {
+        // 初始化游戏
+        function init() {
             board = Array(16).fill(0);
-            tileStates = Array(16).fill(null);
             score = 0;
-            generateNextValue();
-            updateUI();
-            addTile();
-            addTile();
+            spawn(); spawn();
             render();
         }
 
-        function generateNextValue() {
-            nextValue = Math.random() > 0.5 ? 1 : 2;
-        }
-
-        function updateUI() {
-            scoreElement.innerText = score;
-            previewContainer.innerHTML = `<div class="preview-cell n-${nextValue}">${nextValue}</div>`;
-        }
-
-        function addTile() {
-            const emptyCells = board.map((v, i) => v === 0 ? i : null).filter(v => v !== null);
-            if (emptyCells.length > 0) {
-                const idx = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        function spawn() {
+            let empty = board.map((v, i) => v === 0 ? i : null).filter(v => v !== null);
+            if (empty.length > 0) {
+                let idx = empty[Math.floor(Math.random() * empty.length)];
                 board[idx] = nextValue;
-                tileStates[idx] = 'new';
-                generateNextValue();
-                updateUI();
+                nextValue = Math.random() > 0.5 ? 1 : 2;
+                nextElement.innerText = nextValue;
+                nextElement.parentElement.style.backgroundColor = nextValue === 1 ? '#64b5f6' : '#ef5350';
             }
         }
 
+        // 核心渲染逻辑：计算每个方块的绝对位置
         function render() {
+            // 清除之前的方块
             document.querySelectorAll('.tile').forEach(t => t.remove());
-            board.forEach((val, idx) => {
+            board.forEach((val, i) => {
                 if (val > 0) {
-                    const t = document.createElement('div');
-                    t.className = `tile n-${val <= 24 ? val : 'huge'}`;
-                    if (tileStates[idx]) t.classList.add(`tile-${tileStates[idx]}`);
-                    t.innerText = val;
-                    bgCells[idx].appendChild(t);
+                    const tile = document.createElement('div');
+                    tile.className = `tile n-${val > 6 ? '6' : val}`;
+                    tile.innerText = val;
+                    tile.id = `tile-${i}`;
+                    
+                    // 计算基于格子的位置
+                    const row = Math.floor(i / 4);
+                    const col = i % 4;
+                    positionTile(tile, row, col);
+                    boardContainer.appendChild(tile);
                 }
             });
-            tileStates.fill(null);
+            scoreElement.innerText = score;
         }
 
+        function positionTile(el, row, col, offsetX = 0, offsetY = 0) {
+            const gap = 12; // grid-gap
+            const size = el.offsetWidth || (boardContainer.offsetWidth - 60) / 4; 
+            // 简单的计算公式定位到背景格中心
+            const x = col * (size + gap) + gap;
+            const y = row * (size + gap) + gap;
+            el.style.transform = `translate(${x + offsetX}px, ${y + offsetY}px)`;
+        }
+
+        // 触摸开始
+        document.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            currentDir = null;
+            isMoving = true;
+            // 关闭所有方块的动画过渡，防止滑动延迟
+            document.querySelectorAll('.tile').forEach(t => t.style.transition = 'none');
+        }, {passive: false});
+
+        // 触摸移动：实时跟随手指
+        document.addEventListener('touchmove', e => {
+            if (!isMoving) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+
+            // 确定滑动方向并锁定
+            if (!currentDir) {
+                if (Math.abs(dx) > 10) currentDir = 'H';
+                else if (Math.abs(dy) > 10) currentDir = 'V';
+                return;
+            }
+
+            e.preventDefault(); // 阻止滚动
+
+            // 限制滑动距离最大为一个格子的大小
+            const maxMove = 80; 
+            const moveX = currentDir === 'H' ? Math.max(Math.min(dx, maxMove), -maxMove) : 0;
+            const moveY = currentDir === 'V' ? Math.max(Math.min(dy, maxMove), -maxMove) : 0;
+
+            // 让所有方块随手指偏移
+            board.forEach((val, i) => {
+                if (val > 0) {
+                    const tile = document.getElementById(`tile-${i}`);
+                    if (tile) {
+                        const row = Math.floor(i / 4);
+                        const col = i % 4;
+                        positionTile(tile, row, col, moveX, moveY);
+                    }
+                }
+            });
+        }, {passive: false});
+
+        // 触摸结束：判断是合并还是撤回
+        document.addEventListener('touchend', e => {
+            if (!isMoving) return;
+            isMoving = false;
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            const threshold = 50; // 滑动超过50px才触发逻辑
+
+            let direction = null;
+            if (currentDir === 'H' && Math.abs(dx) > threshold) direction = dx > 0 ? 'RIGHT' : 'LEFT';
+            if (currentDir === 'V' && Math.abs(dy) > threshold) direction = dy > 0 ? 'DOWN' : 'UP';
+
+            if (direction) {
+                executeMove(direction);
+            } else {
+                // 距离不够，撤回原位
+                document.querySelectorAll('.tile').forEach(t => t.style.transition = 'transform 0.2s ease-out');
+                render(); 
+            }
+        });
+
+        // 游戏逻辑处理（与之前类似，但触发在松手后）
         function canMerge(a, b) {
-            return (a !== 0 && b !== 0) && (((a === 1 && b === 2) || (a === 2 && b === 1)) || (a === b && a >= 3));
+            if (a === 0 || b === 0) return false;
+            if ((a === 1 && b === 2) || (a === 2 && b === 1)) return true;
+            return (a === b && a >= 3);
         }
 
-        function move(dir) {
+        function executeMove(dir) {
             let moved = false;
-            tileStates.fill(null);
-            const isHoriz = dir === 'LEFT' || dir === 'RIGHT';
-            const isReverse = dir === 'RIGHT' || dir === 'DOWN';
+            const isH = dir === 'LEFT' || dir === 'RIGHT';
+            const isRev = dir === 'RIGHT' || dir === 'DOWN';
 
             for (let i = 0; i < 4; i++) {
                 let line = [];
                 for (let j = 0; j < 4; j++) {
-                    line.push(board[isHoriz ? (i * 4 + j) : (j * 4 + i)]);
+                    line.push(board[isH ? (i * 4 + j) : (j * 4 + i)]);
                 }
-                if (isReverse) line.reverse();
+                if (isRev) line.reverse();
 
                 let filtered = line.filter(v => v !== 0);
                 let res = [];
-                let lineMerged = Array(4).fill(false);
-
                 for (let j = 0; j < filtered.length; j++) {
                     if (j < filtered.length - 1 && canMerge(filtered[j], filtered[j+1])) {
-                        const val = filtered[j] + filtered[j+1];
-                        res.push(val);
-                        score += val;
-                        lineMerged[res.length - 1] = true;
+                        res.push(filtered[j] + filtered[j+1]);
+                        score += res[res.length-1];
                         j++;
                         moved = true;
                     } else {
@@ -248,67 +222,24 @@
                     }
                 }
                 while (res.length < 4) res.push(0);
-                if (isReverse) { res.reverse(); lineMerged.reverse(); }
+                if (isRev) res.reverse();
 
                 for (let j = 0; j < 4; j++) {
-                    const idx = isHoriz ? (i * 4 + j) : (j * 4 + i);
+                    const idx = isH ? (i * 4 + j) : (j * 4 + i);
                     if (board[idx] !== res[j]) moved = true;
                     board[idx] = res[j];
-                    if (lineMerged[j]) tileStates[idx] = 'merged';
                 }
             }
 
             if (moved) {
-                addTile();
-                render();
-                if (isGameOver()) setTimeout(() => alert('Game Over!'), 300);
+                spawn();
             }
+            // 增加过渡动画后重新渲染
+            document.querySelectorAll('.tile').forEach(t => t.style.transition = 'transform 0.1s ease-out');
+            render();
         }
 
-        function isGameOver() {
-            if (board.includes(0)) return false;
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 4; j++) {
-                    const idx = i * 4 + j;
-                    if (j < 3 && canMerge(board[idx], board[idx+1])) return false;
-                    if (i < 3 && canMerge(board[idx], board[idx+4])) return false;
-                }
-            }
-            return true;
-        }
-
-        // --- 增强版触摸支持 ---
-        let startX, startY;
-        document.addEventListener('touchstart', e => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        }, {passive: false});
-
-        document.addEventListener('touchmove', e => {
-            e.preventDefault(); // 彻底阻止手机端滚动
-        }, {passive: false});
-
-        document.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - startX;
-            const dy = e.changedTouches[0].clientY - startY;
-            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    move(dx > 0 ? 'RIGHT' : 'LEFT');
-                } else {
-                    move(dy > 0 ? 'DOWN' : 'UP');
-                }
-            }
-        }, {passive: false});
-
-        // 键盘支持
-        window.addEventListener('keydown', e => {
-            if (e.key.includes('Arrow')) {
-                e.preventDefault();
-                move(e.key.replace('Arrow', '').toUpperCase());
-            }
-        });
-
-        initGame();
+        init();
     </script>
 </body>
 </html>
